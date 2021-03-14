@@ -28,6 +28,18 @@ class Coin(threading.Thread):
     def set_order(self, order):
         self.order_amount = int(order)
 
+    def set_sell_offset(self, sell_offset):
+        self.sell_offset = float(sell_offset)
+
+    def set_buy_offset(self, buy_offset):
+        self.buy_offset = float(buy_offset)
+
+    def set_percent(self, percent):
+        self.percent = float(percent)
+
+    def set_safe_stop(self, flag):
+        self.safe_stop = flag
+
     def check_log_file(self):
         if not os.path.isdir('./logs'):
             os.mkdir('./logs')
@@ -46,10 +58,27 @@ class Coin(threading.Thread):
             with open('./logs/log_{coin}.txt'.format(coin=self.coin), 'a') as logFile:
                 logFile.write('Type\tCoin\tPrice\tCount\tPercent\tTime')
 
-    def __init__(self, name, order):
+    def read_logger_safe_stop(self):
+        if self.safe_stop:
+            f = True
+            with open('./logs/log_{coin}.txt'.format(coin=self.coin), 'r') as logFile:
+                line = logFile.readlines()[-1]
+                data = line.split('\t')
+                if data[0] == 'Buy':
+                    f = False
+            if f:
+                print('---SAFE STOP {coin} IS OK---'.format(coin=self.coin))
+            return f
+        return False
+
+    def __init__(self, name, order, buy_offset, sell_offset, percent):
         threading.Thread.__init__(self)
+        self.safe_stop = False
         self.set_coin(name)
         self.set_order(order)
+        self.set_buy_offset(buy_offset)
+        self.set_sell_offset(sell_offset)
+        self.set_percent(percent)
         self.coin_market_name = self.coin.lower() + 'usdt'
         self.check_log_file()
         self.read_logger()
@@ -313,23 +342,24 @@ class Coin(threading.Thread):
             if self.__flag_buy:
                 if order_exist == False:
                     if self.coin not in coin_exist:
-                        # high_buy_price = get_market_high_value('chzusdt', 0)
-                        # if high_buy_price:
-                        d = self.get_market_depth(self.coin_market_name, 0, 5)
-                        self.__buy_price = round(float(d['bids'][0][0]), 8) + 0.00001
-                        # buy_price = float(price)
-                        self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
-                        print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price))
-                        self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
+                        if not self.safe_stop:
+                            # high_buy_price = get_market_high_value('chzusdt', 0)
+                            # if high_buy_price:
+                            d = self.get_market_depth(self.coin_market_name, 0, 5)
+                            self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
+                            # buy_price = float(price)
+                            self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
+                            print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price))
+                            self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
         if type == 'sell':
             if self.coin in coin_exist:
                 if order_exist == False:
                     d = self.get_market_depth(self.coin_market_name, 0, 5)
-                    sell_price = round(float(d['asks'][0][0]), 8) - 0.00005
+                    sell_price = round(float(d['asks'][0][0]), 8) - self.sell_offset
                     # sell_price = float(price)
                     percent = sell_price - self.__buy_price
                     print('Percent: ' + str(percent))
-                    if percent >= 0.0002:
+                    if percent >= self.percent:
                         buy_price = 0
                         print('go to sell')
                         print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
@@ -345,7 +375,7 @@ class Coin(threading.Thread):
 
     def run(self):
         counter = 1
-        while True:
+        while not self.read_logger_safe_stop():
             if counter == 1:
                 df = self.get_kline_data(self.coin_market_name, '1min', 100)[0]
                 old_flag = df['amount'][99]

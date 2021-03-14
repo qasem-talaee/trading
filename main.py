@@ -3,7 +3,7 @@ from libs import coin
 
 
 def onPress(key):
-    if str(key) == "'s'":
+    if str(key) == "'`'":
         chz.set_safe_stop(True)
         hot.set_safe_stop(True)
         print('-----SAFE STOP IS ON ROLL-----')

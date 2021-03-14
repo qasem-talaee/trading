@@ -29,6 +29,8 @@ class Coin(threading.Thread):
         self.order_amount = int(order)
 
     def check_log_file(self):
+        if not os.path.isdir('./logs'):
+            os.mkdir('./logs')
         if not os.path.isfile('./logs/log_{coin}.txt'.format(coin=self.coin)):
             open('./logs/log_{coin}.txt'.format(coin=self.coin), 'a').close()
 

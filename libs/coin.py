@@ -357,18 +357,18 @@ class Coin(threading.Thread):
                     d = self.get_market_depth(self.coin_market_name, 0, 5)
                     sell_price = round(float(d['asks'][0][0]), 8) - self.sell_offset
                     # sell_price = float(price)
-                    percent = sell_price - self.__buy_price
-                    print('Percent: ' + str(percent))
-                    if percent >= self.percent:
-                        buy_price = 0
+                    own_percent = ((sell_price - self.__buy_price) / sell_price) * 100
+                    print('Percent: ' + str(own_percent))
+                    if own_percent >= self.percent:
+                        self.__buy_price = 0
                         print('go to sell')
                         print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
-                        self.logger('Sell', self.coin, sell_price, self.__order_count, percent)
-                    if percent <= -0.5:
-                        buy_price = 0
+                        self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
+                    if own_percent <= -0.5:
+                        self.__buy_price = 0
                         print('go to sell zarar')
                         print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
-                        self.logger('Sell', self.coin, sell_price, self.__order_count, percent)
+                        self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
                     # if order_exist == True:
                     # cancell_all_order(access_id, 'chzusdt')
                     # print('Cancelled')

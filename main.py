@@ -5,7 +5,7 @@ from libs import coin
 def onPress(key):
     if str(key) == "'`'":
         coin1.set_safe_stop(True)
-        coin2.set_safe_stop(True)
+        #coin2.set_safe_stop(True)
         print('-----SAFE STOP IS ON ROLL-----')
 
 

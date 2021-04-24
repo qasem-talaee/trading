@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import threading
+from ta import momentum
 
 
 class Coin(threading.Thread):
@@ -43,8 +44,12 @@ class Coin(threading.Thread):
     def check_log_file(self):
         if not os.path.isdir('./logs'):
             os.mkdir('./logs')
+        if not os.path.isdir('./logs/cancelLogs'):
+            os.mkdir('./logs/cancelLogs')
         if not os.path.isfile('./logs/log_{coin}.txt'.format(coin=self.coin)):
             open('./logs/log_{coin}.txt'.format(coin=self.coin), 'a').close()
+        if not os.path.isfile('./logs/cancelLogs/log_{coin}.txt'.format(coin=self.coin)):
+            open('./logs/cancelLogs/log_{coin}.txt'.format(coin=self.coin), 'a').close()
 
     def read_logger(self):
         if os.stat('./logs/log_{coin}.txt'.format(coin=self.coin)).st_size != 0:
@@ -87,6 +92,15 @@ class Coin(threading.Thread):
         now_time = datetime.datetime.now()
         with open('logs/log_{coin}.txt'.format(coin=self.coin), 'a') as logFile:
             logFile.write('\n' + type + '\t' + coin + '\t' + str(price) + '\t' + str(count) + '\t' + str(percent) + '\t' + str(now_time))
+
+    def cancel_logger(self, type, msg):
+        now_time = datetime.datetime.now()
+        if type == 'buy':
+            msg = 'Buy canceled for : ' + msg
+        if type == 'sell':
+            msg = 'Sell canceled for : ' + msg
+        with open('logs/cancelLogs/log_{coin}.txt'.format(coin=self.coin), 'a') as logFile:
+            logFile.write(msg + '\t' + str(now_time) + '\n') 
 
     def get_sign(self, params, secret_key):
         data = '&'.join([key + '=' + str(params[key]) for key in sorted(params)])
@@ -316,14 +330,45 @@ class Coin(threading.Thread):
                     flag = 1
         return True
 
+    def tsi_trust(self, before, new):
+        if before < -25:
+            if new > -25:
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def divergence(self, data):
+        macd = pd.to_numeric(data['macd'])
+        macd = macd.loc(macd['macd'] > 0)
+        print(macd)
+
     def macd(self, data):
         #time = data['Time']
         del data['Time']
         data = StockDataFrame.retype(data)
         data['Macd'] = data.get('macd')
+        # WILLIAMS %R
+        #high_val = float(data['high'].max())
+        #low_val = float(data['low'].min())
+        #close_val = float(data['close'].iloc[-1])
+        #r_percent = ((high_val - close_val) / (high_val - low_val)) * -100
+        #TSIIndicator
+        tsi = momentum.tsi(pd.to_numeric(data['close']), 9, 4)
+        r_percent = float(momentum.williams_r(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']), 14).iloc[-1])
         if data['macd'].iloc[-1] <= 0:
-            self.__flag_buy = True
+            if r_percent >= -40:
+                if self.tsi_trust(float(tsi[98]), float(tsi[99])):
+                    self.__flag_buy = True
+                else:
+                    self.cancel_logger('buy', 'TSI')
+                    self.__flag_buy = False
+            else:
+                self.cancel_logger('buy', 'Williams %R')
+                self.__flag_buy = False
         else:
+            self.cancel_logger('buy', 'Positive sycle')
             self.__flag_buy = False
         return data
 
@@ -345,18 +390,20 @@ class Coin(threading.Thread):
                         if not self.safe_stop:
                             # high_buy_price = get_market_high_value('chzusdt', 0)
                             # if high_buy_price:
-                            d = self.get_market_depth(self.coin_market_name, 0, 5)
-                            self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
-                            # buy_price = float(price)
+                            #d = self.get_market_depth(self.coin_market_name, 0, 5)
+                            #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
+                            self.__buy_price = float(price) + self.buy_offset
                             self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
                             print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price))
                             self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
+                else:
+                    cancel_logger('buy', 'Order exist')
         if type == 'sell':
             if self.coin in coin_exist:
                 if order_exist == False:
-                    d = self.get_market_depth(self.coin_market_name, 0, 5)
-                    sell_price = round(float(d['asks'][0][0]), 8) - self.sell_offset
-                    # sell_price = float(price)
+                    #d = self.get_market_depth(self.coin_market_name, 0, 5)
+                    #sell_price = round(float(d['asks'][0][0]), 8) - self.sell_offset
+                    sell_price = float(price) - self.sell_offset
                     own_percent = ((sell_price - self.__buy_price) / sell_price) * 100
                     print('Percent: ' + str(own_percent))
                     if own_percent >= self.percent:
@@ -364,11 +411,15 @@ class Coin(threading.Thread):
                         print('go to sell')
                         print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
                         self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
-                    if own_percent <= -0.5:
+                    elif own_percent <= -0.5:
                         self.__buy_price = 0
                         print('go to sell zarar')
                         print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
                         self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
+                    else:
+                        cancel_logger('sell', 'Not coinex percent')
+                else:
+                    cancel_logger('sell', 'Order exist')
                     # if order_exist == True:
                     # cancell_all_order(access_id, 'chzusdt')
                     # print('Cancelled')

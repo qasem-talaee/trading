@@ -331,13 +331,12 @@ class Coin(threading.Thread):
         return True
 
     def tsi_trust(self, before, new):
-        if before < -25:
-            if new > -25:
-                return True
-            else:
+        if before > 25:
+            if new <= 25:
                 return False
-        else:
-            return False
+        if before < -25:
+            if new >= -25:
+                return True
 
     def divergence(self, data):
         macd = pd.to_numeric(data['macd'])
@@ -355,21 +354,21 @@ class Coin(threading.Thread):
         #close_val = float(data['close'].iloc[-1])
         #r_percent = ((high_val - close_val) / (high_val - low_val)) * -100
         #TSIIndicator
-        tsi = momentum.tsi(pd.to_numeric(data['close']), 9, 4)
+        tsi = momentum.tsi(pd.to_numeric(data['close']), 25, 13)
         r_percent = float(momentum.williams_r(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']), 14).iloc[-1])
-        if data['macd'].iloc[-1] <= 0:
-            if r_percent >= -40:
-                if self.tsi_trust(float(tsi[98]), float(tsi[99])):
-                    self.__flag_buy = True
-                else:
-                    self.cancel_logger('buy', 'TSI')
-                    self.__flag_buy = False
+        #if data['macd'].iloc[-1] <= 0:
+        if r_percent >= -40:
+            if self.tsi_trust(float(tsi[98]), float(tsi[99])):
+                self.__flag_buy = True
             else:
-                self.cancel_logger('buy', 'Williams %R')
+                self.cancel_logger('buy', 'TSI {tsi1} AND {tsi2}'.format(tsi1=tsi[98], tsi2=tsi[99]))
                 self.__flag_buy = False
         else:
-            self.cancel_logger('buy', 'Positive sycle')
+            self.cancel_logger('buy', 'Williams %R {r}'.format(r=r_percent))
             self.__flag_buy = False
+        #else:
+            #self.cancel_logger('buy', 'Positive sycle')
+            #self.__flag_buy = False
         return data
 
     def plotting(self, df, time):
@@ -428,13 +427,13 @@ class Coin(threading.Thread):
         counter = 1
         while not self.read_logger_safe_stop():
             if counter == 1:
-                df = self.get_kline_data(self.coin_market_name, '1min', 100)[0]
+                df = self.get_kline_data(self.coin_market_name, '15min', 100)[0]
                 old_flag = df['amount'][99]
                 df_macd = self.macd(df)
                 time.sleep(5)
                 counter += 1
             else:
-                kline = self.get_kline_data(self.coin_market_name, '1min', 100)
+                kline = self.get_kline_data(self.coin_market_name, '15min', 100)
                 new_df = kline[0]
                 new_flag = new_df['amount'][99]
                 if new_flag != old_flag:

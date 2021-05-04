@@ -1,0 +1,1 @@
+# MY awesome TRADING project

@@ -396,10 +396,10 @@ class Coin(threading.Thread):
                             #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
                             self.__buy_price = float(price) + self.buy_offset
                             self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
-                            print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price))
+                            self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
                             self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
                 else:
-                    cancel_logger('buy', 'Order exist')
+                    self.cancel_logger('buy', 'Order exist')
         if type == 'sell':
             if self.coin in coin_exist:
                 if order_exist == False:
@@ -410,18 +410,18 @@ class Coin(threading.Thread):
                     print('Percent: ' + str(own_percent))
                     if own_percent >= self.percent:
                         self.__buy_price = 0
-                        print('go to sell')
-                        print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
+                        #print('go to sell')
+                        self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                         self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
                     elif own_percent <= -0.5:
                         self.__buy_price = 0
-                        print('go to sell zarar')
-                        print(self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price)))
+                        #print('go to sell zarar')
+                        self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                         self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
                     else:
-                        cancel_logger('sell', 'Not coinex percent')
+                        self.cancel_logger('sell', 'Not coinex percent')
                 else:
-                    cancel_logger('sell', 'Order exist')
+                    self.cancel_logger('sell', 'Order exist')
                     # if order_exist == True:
                     # cancell_all_order(access_id, 'chzusdt')
                     # print('Cancelled')

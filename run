@@ -1,0 +1,7 @@
+#!/bin/bash
+source "./venv/bin/activate"
+while true
+do
+    echo '---Run Program---'
+    python3 main.py
+done

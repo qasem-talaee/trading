@@ -329,7 +329,7 @@ class Coin(threading.Thread):
                 if result.json()['message'] == 'Success':
                     flag = 1
         return True
-
+    '''
     def tsi_trust(self, tsi):
         ascending = False
         if tsi.iloc[-1] >= -25:
@@ -340,6 +340,14 @@ class Coin(threading.Thread):
                     if tsi.iloc[i] <= tsi.iloc[i-1]:
                         ascending = False
         return ascending
+    '''
+    def tsi_trust(self, tsi):
+        result = False
+        if tsi.iloc[-1] >= -25:
+            if tsi.iloc[-1] <= -20:
+                if tsi.iloc[len(tsi)-2] <= tsi.iloc[-1]:
+                    result = True
+        return result
 
     def divergence(self, data):
         macd = pd.to_numeric(data['macd'])
@@ -357,14 +365,14 @@ class Coin(threading.Thread):
         #close_val = float(data['close'].iloc[-1])
         #r_percent = ((high_val - close_val) / (high_val - low_val)) * -100
         #TSIIndicator
-        tsi = momentum.tsi(pd.to_numeric(data['close']), 25, 13)
+        tsi = momentum.tsi(pd.to_numeric(data['close']),9, 4)
         r_percent = float(momentum.williams_r(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']), 14).iloc[-1])
         #if data['macd'].iloc[-1] <= 0:
         if r_percent >= -40:
             if self.tsi_trust(tsi.iloc[90:]):
                 self.__flag_buy = True
             else:
-                self.cancel_logger('buy', 'TSI')
+                self.cancel_logger('buy', 'TSI {val}'.format(val=tsi.iloc[-1]))
                 self.__flag_buy = False
         else:
             self.cancel_logger('buy', 'Williams %R {r}'.format(r=r_percent))
@@ -396,7 +404,7 @@ class Coin(threading.Thread):
                             #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
                             self.__buy_price = float(price) + self.buy_offset
                             self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
-                            self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
+                            #self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
                             self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
                 else:
                     self.cancel_logger('buy', 'Order exist')

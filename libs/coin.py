@@ -352,7 +352,7 @@ class Coin(threading.Thread):
     def rsi_trust(self, rsi):
         result = False
         if rsi.iloc[-1] >= 30:
-            if rsi.iloc[-1] <= 30:
+            if rsi.iloc[-1] <= 35:
                 if rsi.iloc[len(rsi)-2] <= rsi.iloc[-1]:
                     result = True
         return result

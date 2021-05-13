@@ -349,10 +349,13 @@ class Coin(threading.Thread):
                     result = True
         return result
 
-    def divergence(self, data):
-        macd = pd.to_numeric(data['macd'])
-        macd = macd.loc(macd['macd'] > 0)
-        print(macd)
+    def rsi_trust(self, rsi):
+        result = False
+        if rsi.iloc[-1] >= 30:
+            if rsi.iloc[-1] <= 30:
+                if rsi.iloc[len(rsi)-2] <= rsi.iloc[-1]:
+                    result = True
+        return result
 
     def macd(self, data):
         #time = data['Time']
@@ -367,6 +370,8 @@ class Coin(threading.Thread):
         #TSIIndicator
         tsi = momentum.tsi(pd.to_numeric(data['close']),9, 4)
         r_percent = float(momentum.williams_r(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']), 14).iloc[-1])
+        rsi = momentum.rsi(pd.to_numeric(data['close']), 23, True)
+        print(rsi)
         #if data['macd'].iloc[-1] <= 0:
         if r_percent >= -40:
             if self.tsi_trust(tsi.iloc[90:]):
@@ -374,6 +379,12 @@ class Coin(threading.Thread):
             else:
                 self.cancel_logger('buy', 'TSI {val}'.format(val=tsi.iloc[-1]))
                 self.__flag_buy = False
+            if not self.__flag_buy:
+                if self.rsi_trust(rsi.iloc[90:]):
+                        self.__flag_buy = True
+                else:
+                    self.__flag_buy = False
+                    self.cancel_logger('buy', 'RSI {val}'.format(val=rsi.iloc[-1]))
         else:
             self.cancel_logger('buy', 'Williams %R {r}'.format(r=r_percent))
             self.__flag_buy = False

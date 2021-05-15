@@ -12,7 +12,7 @@ from libs import coin
 #listener = keyboard.Listener(on_press=onPress, )
 #0.0003
 coin1 = coin.Coin('eth', 5, 0, 0, 1.5)
-coin2 = coin.Coin('doge', 5, 0, 0, 1.5)
+coin2 = coin.Coin('ada', 5, 0, 0, 1.5)
 
 
 coin1.start()

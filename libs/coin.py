@@ -368,22 +368,22 @@ class Coin(threading.Thread):
         #close_val = float(data['close'].iloc[-1])
         #r_percent = ((high_val - close_val) / (high_val - low_val)) * -100
         #TSIIndicator
-        tsi = momentum.tsi(pd.to_numeric(data['close']))
-        r_percent = float(momentum.williams_r(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close'])).iloc[-1])
-        rsi = momentum.rsi(pd.to_numeric(data['close']), True)
+        tsi = momentum.TSIIndicator(pd.to_numeric(data['close']), fillna=True)
+        r_percent = float(momentum.WilliamsRIndicator(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']))._wr.iloc[-1])
+        rsi = momentum.RSIIndicator(pd.to_numeric(data['close']), fillna=True)
         #if data['macd'].iloc[-1] <= 0:
         if r_percent >= -40:
-            if self.tsi_trust(tsi.iloc[990:]):
+            if self.tsi_trust(tsi._tsi.iloc[990:]):
                 self.__flag_buy = True
             else:
-                self.cancel_logger('buy', 'TSI {val}'.format(val=tsi.iloc[-1]))
+                self.cancel_logger('buy', 'TSI {val}'.format(val=tsi._tsi.iloc[-1]))
                 self.__flag_buy = False
             if not self.__flag_buy:
-                if self.rsi_trust(rsi.iloc[990:]):
+                if self.rsi_trust(rsi._rsi.iloc[990:]):
                         self.__flag_buy = True
                 else:
                     self.__flag_buy = False
-                    self.cancel_logger('buy', 'RSI {val}'.format(val=rsi.iloc[-1]))
+                    self.cancel_logger('buy', 'RSI {val}'.format(val=rsi._rsi.iloc[-1]))
         else:
             self.cancel_logger('buy', 'Williams %R {r}'.format(r=r_percent))
             self.__flag_buy = False
@@ -414,7 +414,7 @@ class Coin(threading.Thread):
                             #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
                             self.__buy_price = float(price) + self.buy_offset
                             self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
-                            #self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
+                            self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
                             self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
                 else:
                     self.cancel_logger('buy', 'Order exist')
@@ -431,7 +431,7 @@ class Coin(threading.Thread):
                         #print('go to sell')
                         self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                         self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
-                    elif own_percent <= -0.5:
+                    elif own_percent <= -5:
                         self.__buy_price = 0
                         #print('go to sell zarar')
                         self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))

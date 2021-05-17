@@ -9,7 +9,10 @@ import json
 import os
 import threading
 from ta import momentum
+from stolgo.candlestick import CandleStick
 
+
+candleTest = CandleStick()
 
 class Coin(threading.Thread):
     __access_id = '5C5076DB01D34ABF9EE74837D76F3931'
@@ -329,18 +332,7 @@ class Coin(threading.Thread):
                 if result.json()['message'] == 'Success':
                     flag = 1
         return True
-    '''
-    def tsi_trust(self, tsi):
-        ascending = False
-        if tsi.iloc[-1] >= -25:
-            if tsi.iloc[-1] <= -20:
-                ascending = True
-                tsi_len = len(tsi)
-                for i in range(1, tsi_len):
-                    if tsi.iloc[i] <= tsi.iloc[i-1]:
-                        ascending = False
-        return ascending
-    '''
+  
     def tsi_trust(self, tsi):
         result = False
         if tsi.iloc[-1] >= -25:
@@ -368,10 +360,12 @@ class Coin(threading.Thread):
         #close_val = float(data['close'].iloc[-1])
         #r_percent = ((high_val - close_val) / (high_val - low_val)) * -100
         #TSIIndicator
+        candelKline = data.iloc[2:].rename(columns={"open": "Open", "close": "Close", "high": "High", "low": "Low", "volume": "Volume", "amount": "Amount"}).apply(pd.to_numeric)
         tsi = momentum.TSIIndicator(pd.to_numeric(data['close']), fillna=True)
         r_percent = float(momentum.WilliamsRIndicator(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']))._wr.iloc[-1])
         rsi = momentum.RSIIndicator(pd.to_numeric(data['close']), fillna=True)
         #if data['macd'].iloc[-1] <= 0:
+        #IDICATORS
         if r_percent >= -40:
             if self.tsi_trust(tsi._tsi.iloc[990:]):
                 self.__flag_buy = True
@@ -387,6 +381,13 @@ class Coin(threading.Thread):
         else:
             self.cancel_logger('buy', 'Williams %R {r}'.format(r=r_percent))
             self.__flag_buy = False
+        #CANDLES
+        if not self.__flag_buy:
+            if not candleTest.is_doji_candle(candelKline):
+                if candleTest.is_bullish_engulfing(candelKline):
+                    self.__flag_buy = True
+                if candleTest.is_hammer_candle(candelKline):
+                    self.__flag_buy = True
         #else:
             #self.cancel_logger('buy', 'Positive sycle')
             #self.__flag_buy = False
@@ -414,7 +415,7 @@ class Coin(threading.Thread):
                             #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
                             self.__buy_price = float(price) + self.buy_offset
                             self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
-                            self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
+                            #self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
                             self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
                 else:
                     self.cancel_logger('buy', 'Order exist')

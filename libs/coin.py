@@ -10,9 +10,11 @@ import os
 import threading
 from ta import momentum
 from stolgo.candlestick import CandleStick
+from . import candle
 
 
 candleTest = CandleStick()
+
 
 class Coin(threading.Thread):
     __access_id = '5C5076DB01D34ABF9EE74837D76F3931'
@@ -81,6 +83,7 @@ class Coin(threading.Thread):
 
     def __init__(self, name, order, buy_offset, sell_offset, percent):
         threading.Thread.__init__(self)
+        self.candle = candle.Candle()
         self.safe_stop = False
         self.set_coin(name)
         self.set_order(order)
@@ -351,16 +354,12 @@ class Coin(threading.Thread):
 
     def macd(self, data):
         #time = data['Time']
-        del data['Time']
-        data = StockDataFrame.retype(data)
-        data['Macd'] = data.get('macd')
+        #del data['Time']
+        #data = StockDataFrame.retype(data)
+        #data['Macd'] = data.get('macd')
         # WILLIAMS %R
-        #high_val = float(data['high'].max())
-        #low_val = float(data['low'].min())
-        #close_val = float(data['close'].iloc[-1])
-        #r_percent = ((high_val - close_val) / (high_val - low_val)) * -100
         #TSIIndicator
-        candelKline = data.iloc[2:].rename(columns={"open": "Open", "close": "Close", "high": "High", "low": "Low", "volume": "Volume", "amount": "Amount"}).apply(pd.to_numeric)
+        #candelKline = data.iloc[2:].rename(columns={"open": "Open", "close": "Close", "high": "High", "low": "Low", "volume": "Volume", "amount": "Amount"}).apply(pd.to_numeric)
         tsi = momentum.TSIIndicator(pd.to_numeric(data['close']), fillna=True)
         r_percent = float(momentum.WilliamsRIndicator(pd.to_numeric(data['high']), pd.to_numeric(data['low']), pd.to_numeric(data['close']))._wr.iloc[-1])
         rsi = momentum.RSIIndicator(pd.to_numeric(data['close']), fillna=True)
@@ -383,14 +382,24 @@ class Coin(threading.Thread):
             self.__flag_buy = False
         #CANDLES
         if not self.__flag_buy:
+            if self.candle.hammer(data.tail(10)):
+                self.flag_buy = True
+                self.cancel_logger('buy', 'HAMMER')
+            if self.candle.inv_hammer(data.tail(10)):
+                self.flag_buy = True
+                self.cancel_logger('buy', 'INV_HAMMER')
+            if self.candle.bullish_engulfing(data.tail(10)):
+                self.flag_buy = True
+                self.cancel_logger('buy', 'BULLISH_ENGULFING')
+
+
+            '''
             if not candleTest.is_doji_candle(candelKline):
                 if candleTest.is_bullish_engulfing(candelKline):
                     self.__flag_buy = True
                 if candleTest.is_hammer_candle(candelKline):
                     self.__flag_buy = True
-        #else:
-            #self.cancel_logger('buy', 'Positive sycle')
-            #self.__flag_buy = False
+            '''
         return data
 
     def plotting(self, df, time):
@@ -401,98 +410,69 @@ class Coin(threading.Thread):
         axs.legend()
         plt.show()
 
-    def buy_sell(self, type, price):
+    def buy_sell(self, price):
         order_exist = self.get_unexecuted_order(self.__access_id, self.coin_market_name)
         coin_exist = self.get_account_info(self.__access_id)['data']
-        if type == 'buy':
-            if self.__flag_buy:
-                if order_exist == False:
-                    if self.coin not in coin_exist:
-                        if not self.safe_stop:
-                            # high_buy_price = get_market_high_value('chzusdt', 0)
-                            # if high_buy_price:
-                            #d = self.get_market_depth(self.coin_market_name, 0, 5)
-                            #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
-                            self.__buy_price = float(price) + self.buy_offset
-                            self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
-                            #self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
-                            self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
+        if self.__flag_buy:
+            if order_exist == False:
+                if self.coin not in coin_exist:
+                    if not self.safe_stop:
+                        # high_buy_price = get_market_high_value('chzusdt', 0)
+                        # if high_buy_price:
+                        #d = self.get_market_depth(self.coin_market_name, 0, 5)
+                        #self.__buy_price = round(float(d['bids'][0][0]), 8) + self.buy_offset
+                        self.__buy_price = float(price) + self.buy_offset
+                        self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
+                        self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
+                        self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
+            else:
+                self.cancel_logger('buy', 'Order exist')
+
+        if self.coin in coin_exist:
+            if order_exist == False:
+                #d = self.get_market_depth(self.coin_market_name, 0, 5)
+                #sell_price = round(float(d['asks'][0][0]), 8) - self.sell_offset
+                sell_price = float(price) - self.sell_offset
+                own_percent = ((sell_price - self.__buy_price) / sell_price) * 100
+                print('Percent: ' + str(own_percent))
+                if own_percent >= self.percent:
+                    self.__buy_price = 0
+                    #print('go to sell')
+                    self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
+                    self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
+                elif own_percent <= -5:
+                    self.__buy_price = 0
+                    #print('go to sell zarar')
+                    self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
+                    self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
                 else:
-                    self.cancel_logger('buy', 'Order exist')
-        if type == 'sell':
-            if self.coin in coin_exist:
-                if order_exist == False:
-                    #d = self.get_market_depth(self.coin_market_name, 0, 5)
-                    #sell_price = round(float(d['asks'][0][0]), 8) - self.sell_offset
-                    sell_price = float(price) - self.sell_offset
-                    own_percent = ((sell_price - self.__buy_price) / sell_price) * 100
-                    print('Percent: ' + str(own_percent))
-                    if own_percent >= self.percent:
-                        self.__buy_price = 0
-                        #print('go to sell')
-                        self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
-                        self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
-                    elif own_percent <= -5:
-                        self.__buy_price = 0
-                        #print('go to sell zarar')
-                        self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
-                        self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
-                    else:
-                        self.cancel_logger('sell', 'Not coinex percent')
-                else:
-                    self.cancel_logger('sell', 'Order exist')
-                    # if order_exist == True:
-                    # cancell_all_order(access_id, 'chzusdt')
-                    # print('Cancelled')
+                    self.cancel_logger('sell', 'Not coinex percent')
+            else:
+                self.cancel_logger('sell', 'Order exist')
+                # if order_exist == True:
+                # cancell_all_order(access_id, 'chzusdt')
+                # print('Cancelled')
 
     def run(self):
         counter = 1
         while not self.read_logger_safe_stop():
             if counter == 1:
-                df = self.get_kline_data(self.coin_market_name, '2hour', 1000)[0]
-                old_flag = df['amount'][999]
-                df_macd = self.macd(df)
+                df = self.get_kline_data(self.coin_market_name, '2hour', 1000)
+                old_flag = df[0].iloc[-1]['Time']
+                self.macd(df[0])
+                self.buy_sell(df[1])
+                print('new data')
                 time.sleep(5)
                 counter += 1
             else:
                 kline = self.get_kline_data(self.coin_market_name, '2hour', 1000)
                 new_df = kline[0]
-                new_flag = new_df['amount'][999]
+                new_flag = new_df.iloc[-1]['Time']
                 if new_flag != old_flag:
-                    df_macd = self.macd(new_df)
-                    old_flag = new_df['amount'][999]
-                    j = 0
-                    f = 0
-                    for i in range(1000):
-                        if df_macd['macds'][i] >= 0:
-                            if df_macd['macds'][i] <= df_macd['macd'][i]:
-                                j += 1
-                                f = 0
-                            if df_macd['macds'][i] > df_macd['macd'][i]:
-                                j = 0
-                                f += 1
-                        else:
-                            if df_macd['macds'][i] >= df_macd['macd'][i]:
-                                j = 0
-                                f += 1
-                            if df_macd['macds'][i] < df_macd['macd'][i]:
-                                j += 1
-                                f = 0
-                        # d = get_market_depth('chzusdt', 0, 5)
-                        # sell_price = d['asks'][0][0]
-                        # buy_price = d['bids'][0][0]
-                        if j == 1 and f == 0:
-                            # buy
-                            print('Buy')
-                            # file.write(buy_price)
-                            self.buy_sell('buy', kline[1])
-                        if f == 1 and j == 0:
-                            # sell
-                            print('Sell')
-                            # print(sell_price)
-                            # file.write('\t' + sell_price + '\n')
-                            self.buy_sell('sell', kline[1])
-                            # q = q+1
-                        time.sleep(5)
+                    self.macd(new_df)
+                    print('new data')
+                    old_flag = new_df.iloc[-1]['Time']
+                    self.buy_sell(kline[1])
+                    time.sleep(5)
                 else:
                     time.sleep(5)

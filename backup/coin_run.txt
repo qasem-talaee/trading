@@ -1,0 +1,51 @@
+    def run(self):
+        counter = 1
+        while not self.read_logger_safe_stop():
+            if counter == 1:
+                df = self.get_kline_data(self.coin_market_name, '2hour', 1000)[0]
+                old_flag = df['amount'][999]
+                df_macd = self.macd(df)
+                time.sleep(5)
+                counter += 1
+            else:
+                kline = self.get_kline_data(self.coin_market_name, '2hour', 1000)
+                new_df = kline[0]
+                new_flag = new_df['amount'][999]
+                if new_flag != old_flag:
+                    df_macd = self.macd(new_df)
+                    old_flag = new_df['amount'][999]
+                    j = 0
+                    f = 0
+                    for i in range(1000):
+                        if df_macd['macds'][i] >= 0:
+                            if df_macd['macds'][i] <= df_macd['macd'][i]:
+                                j += 1
+                                f = 0
+                            if df_macd['macds'][i] > df_macd['macd'][i]:
+                                j = 0
+                                f += 1
+                        else:
+                            if df_macd['macds'][i] >= df_macd['macd'][i]:
+                                j = 0
+                                f += 1
+                            if df_macd['macds'][i] < df_macd['macd'][i]:
+                                j += 1
+                                f = 0
+                        # d = get_market_depth('chzusdt', 0, 5)
+                        # sell_price = d['asks'][0][0]
+                        # buy_price = d['bids'][0][0]
+                        if j == 1 and f == 0:
+                            # buy
+                            print('Buy')
+                            # file.write(buy_price)
+                            self.buy_sell('buy', kline[1])
+                        if f == 1 and j == 0:
+                            # sell
+                            print('Sell')
+                            # print(sell_price)
+                            # file.write('\t' + sell_price + '\n')
+                            self.buy_sell('sell', kline[1])
+                            # q = q+1
+                        time.sleep(5)
+                else:
+                    time.sleep(5)

@@ -1,5 +1,6 @@
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+#import requests
 
 class Candle:
 
@@ -19,9 +20,7 @@ class Candle:
         else:
             return 0
 
-    def hammer(self, data):
-        data = self.check(data)
-        proc = self.procedure(data.iloc[:data.shape[0] - 2])
+    def hammer(self, data, proc):
         candle = data.iloc[-2]
         trust = data.iloc[-1]
         if proc == 0:
@@ -51,9 +50,7 @@ class Candle:
             else:
                 return False
 
-    def inv_hammer(self, data):
-        data = self.check(data)
-        proc = self.procedure(data.iloc[:data.shape[0] - 2])
+    def inv_hammer(self, data, proc):
         candle = data.iloc[-2]
         trust = data.iloc[-1]
         if proc == 0:
@@ -83,9 +80,7 @@ class Candle:
             else:
                 return False
 
-    def bullish_engulfing(self, data):
-        data = self.check(data)
-        proc = self.procedure(data.iloc[:data.shape[0] - 3])
+    def bullish_engulfing(self, data, proc):
         Fcandle = data.iloc[-3]
         Scandle = data.iloc[-2]
         trust = data.iloc[-1]
@@ -107,6 +102,92 @@ class Candle:
         else:
             return False
 
+    def piercing_line(self, data, proc):
+        Fcandle = data.iloc[-3]
+        Scandle = data.iloc[-2]
+        trust = data.iloc[-1]
+        if proc == 0:
+            return False
+        if proc == 'n':
+            if Scandle['open'] < Fcandle['close']:
+                if Scandle['close'] > (Fcandle['open'] / 2):
+                    if trust['high'] >= Scandle['high']:
+                        return True
+                    else:
+                        return False
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
+
+    def doji(self, data):
+        if (abs(data['open'] - data['close']) / max(data['open'], data['close'])) * 100 <= 5:
+            return True
+        else:
+            return False
+
+    def morning_star(self, data, proc):
+        Fcandle = data.iloc[-3]
+        Scandle = data.iloc[-2]
+        Tcandle = data.iloc[-1]
+        if proc == 0:
+            return False
+        if proc == 'n':
+            if Fcandle['open'] > Fcandle['close']:
+                if self.doji(Scandle):
+                    if Scandle['open'] > Scandle['close']:
+                        if Scandle['open'] < Fcandle['close']:
+                            if Tcandle['open'] < Tcandle['close']:
+                                if Tcandle['open'] > Scandle['open']:
+                                    if Tcandle['close'] > ((Fcandle['open'] - Fcandle['close']) / 2):
+                                        return True
+                                    else:
+                                        return False
+                                else:
+                                    return False
+                            else:
+                                return False
+                        else:
+                            return False
+                    else:
+                        if Scandle['close'] < Fcandle['close']:
+                            if Tcandle['open'] < Tcandle['close']:
+                                if Tcandle['open'] > Scandle['close']:
+                                    if Tcandle['close'] > ((Fcandle['open'] - Fcandle['close']) / 2):
+                                        return True
+                                    else:
+                                        return False
+                                else:
+                                    return False
+                            else:
+                                return False
+                        else:
+                            return False
+                else:
+                    return False
+            return False
+        else:
+            return False
+
+    def candle_stick(self, data):
+        data = self.check(data)
+        proc = self.procedure(data.iloc[:data.shape[0] - 3])
+        if self.hammer(data, proc):
+            return True
+        elif self.inv_hammer(data, proc):
+            return True
+        elif self.bullish_engulfing(data, proc):
+            return True
+        elif self.piercing_line(data, proc):
+            return True
+        elif self.morning_star(data, proc):
+            return True
+        else:
+            return False
+
+
 '''
 c = Candle()
 
@@ -126,5 +207,5 @@ get_result = pd.json_normalize(result.json(), ['data'])
 del get_result[7]
 get_result.columns = ['Time', 'open', 'close', 'high', 'low', 'volume', 'amount']
 print(get_result)
-print(c.bullish_engulfing(get_result.apply(pd.to_numeric)))
+print(c.candle_stick(get_result))
 '''

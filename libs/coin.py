@@ -94,6 +94,9 @@ class Coin(threading.Thread):
         self.check_log_file()
         self.read_logger()
 
+    def __del__(self):
+        print('Coin Deleted')
+
     def logger(self, type, coin, price, count, percent):
         now_time = datetime.datetime.now()
         with open('logs/log_{coin}.txt'.format(coin=self.coin), 'a') as logFile:
@@ -382,15 +385,9 @@ class Coin(threading.Thread):
             self.__flag_buy = False
         #CANDLES
         if not self.__flag_buy:
-            if self.candle.hammer(data.tail(10)):
+            if self.candle.candle_stick(data.tail(10)):
                 self.flag_buy = True
-                self.cancel_logger('buy', 'HAMMER')
-            if self.candle.inv_hammer(data.tail(10)):
-                self.flag_buy = True
-                self.cancel_logger('buy', 'INV_HAMMER')
-            if self.candle.bullish_engulfing(data.tail(10)):
-                self.flag_buy = True
-                self.cancel_logger('buy', 'BULLISH_ENGULFING')
+                self.cancel_logger('buy', 'CANDLE')
 
 
             '''

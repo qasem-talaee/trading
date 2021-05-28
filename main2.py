@@ -2,7 +2,6 @@ import requests
 import threading
 import time
 import os
-import sys
 
 from libs import coin2
 
@@ -83,28 +82,28 @@ class Main(threading.Thread):
 
     def run(self):
         each_coin = self.money / self.n
-        if self.run_flag:
-            for i in self.list:
-                if len(self.runlist) != self.n:
-                    print('start ' + i)
-                    r = coin2.Coin(i, each_coin, 0, 0, 1.5)
-                    r.start()
-                    time.sleep(20)
-                    if r.flag_test:
-                        print('buy ' + i)
-                        self.runlist[self.j] = r
-                        r.join()
-                        l = ListenerCoin(self.runlist[self.j])
-                        l.start()
-                        l.join()
-                        self.j = self.j + 1
-                        self.logger(i)
-                        continue
-                    else:
-                        print('del ' + i)
-                        r.__del__()
-                        continue
-            sys.exit()                           
+        while True:
+            if self.run_flag:
+                for i in self.list:
+                    if len(self.runlist) != self.n:
+                        print('start ' + i)
+                        r = coin2.Coin(i, each_coin, 0, 0, 1.5)
+                        r.start()
+                        time.sleep(20)
+                        if r.flag_test:
+                            print('buy ' + i)
+                            self.runlist[self.j] = r
+                            r.join()
+                            l = ListenerCoin(self.runlist[self.j])
+                            l.start()
+                            l.join()
+                            self.j = self.j + 1
+                            self.logger(i)
+                            continue
+                        else:
+                            print('del ' + i)
+                            r.__del__()
+                            continue
 
 class ListenerCoin(threading.Thread):
 

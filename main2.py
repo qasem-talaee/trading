@@ -2,6 +2,7 @@ import requests
 import threading
 import time
 import os
+import sys
 
 from libs import coin2
 
@@ -103,7 +104,7 @@ class Main(threading.Thread):
                         print('del ' + i)
                         r.__del__()
                         continue
-            exit()                           
+            sys.exit()                           
 
 class ListenerCoin(threading.Thread):
 

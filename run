@@ -3,5 +3,6 @@ source "./venv/bin/activate"
 while true
 do
     echo '---Run Program---'
-    python3 main2.py
+    python3 main.py
+    killall run
 done

@@ -93,6 +93,8 @@ class Coin(threading.Thread):
         self.coin_market_name = self.coin.lower() + 'usdt'
         self.check_log_file()
         self.read_logger()
+        self.flag_test = False
+        self.flag_sell = False
 
     def __del__(self):
         print('Coin Deleted')
@@ -374,12 +376,12 @@ class Coin(threading.Thread):
             flag_candle = True
         #IDICATORS
         if r_percent >= -40:
-            if self.tsi_trust(tsi._tsi.iloc[990:]):
+            if self.tsi_trust(tsi._tsi.tail(10)):
                 flag_indicator = True
             else:
                 self.cancel_logger('buy', 'TSI {val}'.format(val=tsi._tsi.iloc[-1]))
             if not self.__flag_buy:
-                if self.rsi_trust(rsi._rsi.iloc[990:]):
+                if self.rsi_trust(rsi._rsi.tail(10)):
                         flag_indicator = True
                 else:
                     self.cancel_logger('buy', 'RSI {val}'.format(val=rsi._rsi.iloc[-1]))
@@ -389,6 +391,10 @@ class Coin(threading.Thread):
         if flag_indicator:
             if flag_candle:
                 self.__flag_buy = True
+            else:
+                self.__flag_buy = False
+        else:
+            self.__flag_buy = False
         
 
             '''
@@ -423,6 +429,8 @@ class Coin(threading.Thread):
                         self.__order_count = str(round(self.order_amount / self.__buy_price, 8))
                         self.palce_limit_order(self.__access_id, self.coin_market_name, 'buy', self.__order_count, self.__buy_price)
                         self.logger('Buy', self.coin, self.__buy_price, self.__order_count, 0)
+                        self.flag_test = True
+                        self.flag_sell = False
             else:
                 self.cancel_logger('buy', 'Order exist')
 
@@ -438,11 +446,15 @@ class Coin(threading.Thread):
                     #print('go to sell')
                     self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                     self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
+                    self.flag_sell = True
+                    self.flag_buy = False
                 elif own_percent <= -5:
                     self.__buy_price = 0
                     #print('go to sell zarar')
                     self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                     self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
+                    self.flag_sell = True
+                    self.flag_buy = False
                 else:
                     self.cancel_logger('sell', 'Not coinex percent')
             else:

@@ -417,6 +417,7 @@ class Coin(threading.Thread):
     def buy_sell(self, price):
         order_exist = self.get_unexecuted_order(self.__access_id, self.coin_market_name)
         coin_exist = self.get_account_info(self.__access_id)['data']
+        print('check ip : ' + str(order_exist))
         if self.__flag_buy:
             if order_exist == False:
                 if self.coin not in coin_exist:

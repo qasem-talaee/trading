@@ -132,23 +132,31 @@ class Coin(threading.Thread):
         :param type: 1min
         :param limit: 100
         """
-        result = requests.get(
-            'https://api.coinex.com/v1/market/kline?market={market}&type={type}&limit={limit}'.format(
-            market=market,
-            type=type,
-            limit=limit,
-            ),
-            headers=self.__headers
-        )
-        get_result = pd.json_normalize(result.json(), ['data'])
-        del get_result[7]
-        get_result.columns = ['Time', 'open', 'close', 'high', 'low', 'volume', 'amount']
+        flag = 0
+        while flag != 1:
+            try:
+                result = requests.get(
+                    'https://api.coinex.com/v1/market/kline?market={market}&type={type}&limit={limit}'.format(
+                    market=market,
+                    type=type,
+                    limit=limit,
+                    ),
+                    headers=self.__headers
+                )
+            except:
+                print('Try again!')
+            else:
+                get_result = pd.json_normalize(result.json(), ['data'])
+                del get_result[7]
+                get_result.columns = ['Time', 'open', 'close', 'high', 'low', 'volume', 'amount']
+                flag = 1
         return get_result, get_result['close'].iloc[-1]
 
     def get_account_info(self, access_id):
         '''
         :param access_id: access_id
         '''
+        flag = 0
         tonce = time.time() * 1000
         param = {
             'access_id': access_id,
@@ -162,11 +170,19 @@ class Coin(threading.Thread):
             'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.71 Safari/537.36',
             'Authorization': token,
         }
-        result = requests.get(
-            'https://api.coinex.com/v1/balance/info?access_id={access_id}&tonce={tonce}'.format(
-            access_id=access_id, tonce=tonce),
-            headers=headers
-        )
+        while flag != 1:
+            try:
+                result = requests.get(
+                    'https://api.coinex.com/v1/balance/info?access_id={access_id}&tonce={tonce}'.format(
+                    access_id=access_id, tonce=tonce),
+                    headers=headers
+                )
+            except:
+                print('Wrong')
+            else:
+                if result.json()['message'] == 'Success':
+                    flag = 1
+        # ['data']['USDT']['available']
         return result.json()
 
     def palce_limit_order(self, access_id, market, type, amount, price):
@@ -201,11 +217,18 @@ class Coin(threading.Thread):
         :param limit: 5/10/20/50
         :return sell price=['asks'][0][0] --- buy price ['bids'][0][0]
         '''
-        result = requests.get(
-            'https://api.coinex.com/v1/market/depth?market={market}&limit={limit}&merge={merge}'.format(
-            market=market, limit=limit, merge=merge),
-            headers=self.__headers
-        )
+        flag = 0
+        while flag != 1:
+            try:
+                result = requests.get(
+                    'https://api.coinex.com/v1/market/depth?market={market}&limit={limit}&merge={merge}'.format(
+                    market=market, limit=limit, merge=merge),
+                    headers=self.__headers
+                )
+            except:
+                print('Try again!')
+            else:
+                flag = 1
         return result.json()['data']
 
     def get_market_high_value(self, market, merge, limit=50):
@@ -215,22 +238,29 @@ class Coin(threading.Thread):
         :param limit: 5/10/20/50
         :return sell price=['asks'][0][0] --- buy price ['bids'][0][0]
         '''
+        flag = 0
         flag_buy = False
-        result = requests.get(
-            'https://api.coinex.com/v1/market/depth?market={market}&limit={limit}&merge={merge}'.format(
-            market=market, limit=limit, merge=merge),
-            headers=self.__headers
-        )
-        result = result.json()['data']['bids']
-        buy_price = result[0][0]
-        list = []
-        for i in range(1, 50):
-            list.append(result[i][0])
-        max_list = max(list)
-        if buy_price >= max_list:
-            flag_buy = False
-        else:
-            flag_buy = True
+        while flag != 1:
+            try:
+                result = requests.get(
+                    'https://api.coinex.com/v1/market/depth?market={market}&limit={limit}&merge={merge}'.format(
+                    market=market, limit=limit, merge=merge),
+                    headers=self.__headers
+                )
+            except:
+                print('Try again!')
+            else:
+                result = result.json()['data']['bids']
+                buy_price = result[0][0]
+                list = []
+                for i in range(1, 50):
+                    list.append(result[i][0])
+                max_list = max(list)
+                if buy_price >= max_list:
+                    flag_buy = False
+                else:
+                    flag_buy = True
+                flag = 1
         return flag_buy
 
     def get_unexecuted_order(self, access_id, market, page=1, limit=5):
@@ -240,6 +270,7 @@ class Coin(threading.Thread):
         :param page:
         :param limit:
         '''
+        flag = 0
         tonce = time.time() * 1000
         param = {
             'access_id': access_id,
@@ -256,12 +287,18 @@ class Coin(threading.Thread):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
             'Authorization': token,
         }
-
-        result = requests.get(
-            'https://api.coinex.com/v1/order/pending?access_id={access_id}&market={market}&page={page}&limit={limit}&tonce={tonce}'.format(
-            access_id=access_id, tonce=tonce, market=market, page=page, limit=limit),
-            headers=headers
-        )
+        while flag != 1:
+            try:
+                result = requests.get(
+                    'https://api.coinex.com/v1/order/pending?access_id={access_id}&market={market}&page={page}&limit={limit}&tonce={tonce}'.format(
+                    access_id=access_id, tonce=tonce, market=market, page=page, limit=limit),
+                    headers=headers
+                )
+            except:
+                print('Wrong')
+            else:
+                if result.json()['message'] == 'Success':
+                    flag = 1
         if result.json()['data']['count'] == 0:
             return False
         else:
@@ -274,6 +311,7 @@ class Coin(threading.Thread):
         :param market:
         :param account_id:
         '''
+        flag = 0
         tonce = time.time() * 1000
         param = {
             'access_id': access_id,
@@ -289,11 +327,18 @@ class Coin(threading.Thread):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36',
             'Authorization': token,
         }
-        result = requests.delete(
-            'https://api.coinex.com/v1/order/pending?access_id={access_id}&account_id={account_id}&market={market}&tonce={tonce}'.format(
-            access_id=access_id, tonce=tonce, market=market, account_id=account_id),
-            headers=headers
-        )
+        while flag != 1:
+            try:
+                result = requests.delete(
+                    'https://api.coinex.com/v1/order/pending?access_id={access_id}&account_id={account_id}&market={market}&tonce={tonce}'.format(
+                    access_id=access_id, tonce=tonce, market=market, account_id=account_id),
+                    headers=headers
+                )
+            except:
+                print('Wrong')
+            else:
+                if result.json()['message'] == 'Success':
+                    flag = 1
         return True
   
     def tsi_trust(self, tsi):

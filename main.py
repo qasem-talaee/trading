@@ -2,6 +2,7 @@ import requests
 import threading
 import time
 import os
+import sys
 
 from libs import coin
 
@@ -20,8 +21,9 @@ class ListenerCoin(threading.Thread):
                 Main().runlist.remove(self.obj)
                 Main().j -= 1
                 Main().delete_logger(self.obj.coin.lower())
-                self.obj.__del__()
+                self.obj.kill_flag = True
                 self.flag = False
+                break
 
 class Main(threading.Thread):
 
@@ -118,7 +120,7 @@ class Main(threading.Thread):
                             continue
                         else:
                             print('del ' + i)
-                            r.__del__()
+                            r.kill_flag = True
                             continue
 
 m = Main(2, 10)

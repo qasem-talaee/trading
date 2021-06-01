@@ -95,6 +95,7 @@ class Coin(threading.Thread):
         self.read_logger()
         self.flag_test = False
         self.flag_sell = False
+        self.kill_flag = False
 
     def __del__(self):
         print('Coin Deleted')
@@ -442,3 +443,5 @@ class Coin(threading.Thread):
                     time.sleep(5)
                 else:
                     time.sleep(5)
+            if self.kill_flag:
+                break

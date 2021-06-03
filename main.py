@@ -2,7 +2,6 @@ import requests
 import threading
 import time
 import os
-import sys
 
 from libs import coin
 
@@ -17,7 +16,7 @@ class ListenerCoin(threading.Thread):
     def run(self):
         while self.flag:
             if self.obj.flag_sell:
-                print('sell ' + self.obj)
+                print('sell ' + self.obj.coin)
                 Main().runlist.remove(self.obj)
                 Main().j -= 1
                 Main().delete_logger(self.obj.coin.lower())
@@ -110,6 +109,7 @@ class Main(threading.Thread):
                         r = coin.Coin(i, each_coin, 0, 0, 1.5)
                         r.start()
                         time.sleep(20)
+                        print(self.runlist)
                         if r.flag_test:
                             print('buy ' + i)
                             self.runlist.append(r)

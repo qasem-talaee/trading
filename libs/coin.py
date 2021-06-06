@@ -97,9 +97,6 @@ class Coin(threading.Thread):
         self.check_log_file()
         self.read_logger()
 
-    def __del__(self):
-        print('Coin Deleted')
-
     def logger(self, type, coin, price, count, percent):
         now_time = datetime.datetime.now()
         with open('logs/log_{coin}.txt'.format(coin=self.coin), 'a') as logFile:
@@ -406,6 +403,7 @@ class Coin(threading.Thread):
                     self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                     self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
                     self.flag_sell = True
+                    self.flag_test = False
                     self.__flag_buy = False
                 elif own_percent <= -5:
                     self.__buy_price = 0
@@ -413,6 +411,7 @@ class Coin(threading.Thread):
                     self.palce_limit_order(self.__access_id, self.coin_market_name, 'sell', self.__order_count, str(sell_price))
                     self.logger('Sell', self.coin, sell_price, self.__order_count, own_percent)
                     self.flag_sell = True
+                    self.flag_test = False
                     self.__flag_buy = False
                 else:
                     self.cancel_logger('SELL', 'Not coinex percent')

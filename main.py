@@ -5,25 +5,8 @@ import os
 
 from libs import coin
 
-class ListenerCoin(threading.Thread):
-
-    def __init__(self, obj):
-        threading.Thread.__init__(self)
-        print('Listener start ' + obj.coin)
-        self.flag = True
-        self.obj = obj
-
-    def run(self):
-        while self.flag:
-            if self.obj.flag_sell:
-                print('sell ' + self.obj.coin)
-                Main().runlist.remove(self.obj)
-                Main().j -= 1
-                Main().delete_logger(self.obj.coin.lower())
-                self.obj.kill_flag = True
-                self.flag = False
-                break
-
+n = 2
+money = 10
 class Main(threading.Thread):
 
     def set_n(self, n):
@@ -123,5 +106,24 @@ class Main(threading.Thread):
                             r.kill_flag = True
                             continue
 
-m = Main(2, 10)
-m.start()
+main_obj = Main(n, money)
+main_obj.start()
+
+class ListenerCoin(threading.Thread):
+
+    def __init__(self, obj):
+        threading.Thread.__init__(self)
+        print('Listener start ' + obj.coin)
+        self.flag = True
+        self.obj = obj
+
+    def run(self):
+        while self.flag:
+            if self.obj.flag_sell:
+                print('sell ' + self.obj.coin)
+                main_obj.runlist.remove(self.obj)
+                main_obj.j -= 1
+                main_obj.delete_logger(self.obj.coin.lower())
+                self.obj.kill_flag = True
+                self.flag = False
+                break

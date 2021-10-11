@@ -7,6 +7,28 @@ from libs import coin
 
 n = 2
 money = 10
+global main_obj
+
+class ListenerCoin(threading.Thread):
+
+    def __init__(self, obj, main_obj):
+        threading.Thread.__init__(self)
+        print('Listener start ' + obj.coin)
+        self.flag = True
+        self.obj = obj
+        self.main_obj = main_obj
+
+    def run(self):
+        while self.flag:
+            if self.obj.flag_sell:
+                print('sell ' + self.obj.coin)
+                self.main_obj.runlist.remove(self.obj)
+                self.main_obj.j -= 1
+                self.main_obj.delete_logger(self.obj.coin.lower())
+                self.obj.kill_flag = True
+                self.flag = False
+                break
+
 class Main(threading.Thread):
 
     def set_n(self, n):
@@ -52,7 +74,7 @@ class Main(threading.Thread):
                         r = coin.Coin(line.replace('\n', ''), each_coin, 0, 0, 1.5)
                         r.start()
                         self.runlist.append(r)
-                        l = ListenerCoin(self.runlist[self.j])
+                        l = ListenerCoin(self.runlist[self.j], main_obj)
                         l.start()
                         self.j = self.j + 1
 
@@ -96,7 +118,7 @@ class Main(threading.Thread):
                         if r.flag_test:
                             print('buy ' + i)
                             self.runlist.append(r)
-                            l = ListenerCoin(self.runlist[self.j])
+                            l = ListenerCoin(self.runlist[self.j], main_obj)
                             l.start()
                             self.j = self.j + 1
                             self.logger(i)
@@ -108,22 +130,3 @@ class Main(threading.Thread):
 
 main_obj = Main(n, money)
 main_obj.start()
-
-class ListenerCoin(threading.Thread):
-
-    def __init__(self, obj):
-        threading.Thread.__init__(self)
-        print('Listener start ' + obj.coin)
-        self.flag = True
-        self.obj = obj
-
-    def run(self):
-        while self.flag:
-            if self.obj.flag_sell:
-                print('sell ' + self.obj.coin)
-                main_obj.runlist.remove(self.obj)
-                main_obj.j -= 1
-                main_obj.delete_logger(self.obj.coin.lower())
-                self.obj.kill_flag = True
-                self.flag = False
-                break

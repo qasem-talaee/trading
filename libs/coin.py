@@ -17,8 +17,8 @@ from . import candle
 
 
 class Coin(threading.Thread):
-    __access_id = '5C5076DB01D34ABF9EE74837D76F3931'
-    __secret_key = 'D8A56BD2772047748D6E1B9C38CC526D92335266E03A9FEC'
+    __access_id = '#'
+    __secret_key = '#'
     __headers = {
         'Content-Type': 'application/json; charset=utf-8',
         'Accept': 'application/json',

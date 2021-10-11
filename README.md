@@ -1,1 +1,1 @@
-# MY awesome TRADING project
+# MY awesome TRADING COINEX project
